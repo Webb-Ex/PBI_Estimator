@@ -14,7 +14,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import Logo from "@/public/assets/logo_IRIS.png";
+import Logo from "@/public/assets/tps-blue-logo.webp";
 
 import { userData, solutionItems, navMainItems } from "./sidebar-data";
 import { Separator } from "@radix-ui/react-separator";
@@ -30,7 +30,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     >
       <SidebarHeader>
         <div className="flex items-center justify-center px-2 py-3">
-          <Image height={100} width={100} alt="logo" src={Logo}></Image>
+          <Image height={130} width={130} alt="logo" src={Logo}></Image>
         </div>
         <Separator className="my-1" />
         <TeamSwitcher teams={solutionItems} />

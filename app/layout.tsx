@@ -59,7 +59,7 @@ export default function CombinedLayout({
                   <CommandMenu />
                 </div>
                 <div className="flex items-center gap-2">
-                  <SocketConnection />
+                  {/* <SocketConnection /> */}
                   <ThemeToggle />
                 </div>
               </header>

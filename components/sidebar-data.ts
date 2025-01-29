@@ -135,72 +135,20 @@ export const functionItems = [
 
 export const navMainItems = [
   {
-    title: "ATMs",
+    title: "PBIs",
     url: "#",
     icon: SquareTerminal,
     isActive: true,
     items: [
       {
-        title: "Profiles",
+        title: "PBI Management",
+        url: "/PBI",
+      },
+      {
+        title: "Assigned To Me",
         url: "/ATMManager/ATM",
       },
-      {
-        title: "Schedule Downtime",
-        url: "/ATMManager/ATMSchedules",
-      },
-      {
-        title: "Message",
-        url: "/ATMManager/DynamicMsg",
-      },
-      {
-        title: "Templates",
-        url: "/ATMManager/ATMTemplates",
-      },
+      
     ],
-  },
-  {
-    title: "ATM Receipts",
-    url: "#",
-    icon: Receipt,
-    items: [
-      {
-        title: "Item1",
-        url: "#",
-      },
-      {
-        title: "Item2",
-        url: "#",
-      },
-      {
-        title: "Item3",
-        url: "#",
-      },
-    ],
-  },
-  {
-    title: "Configuration Groups",
-    url: "#",
-    icon: MonitorCog,
-    items: [
-      {
-        title: "Configuration Profile",
-        url: "#",
-      },
-      {
-        title: "TM Bank",
-        url: "#",
-      },
-    ],
-  },
-  {
-    title: "Transaction Monitoring",
-    url: "#",
-    icon: MonitorCog,
-    items: [
-      {
-        title: "Transactions",
-        url: "/Monitoring/Transactions",
-      },
-    ]
-  },
+  }
 ]

@@ -332,18 +332,6 @@ export default function ATMTable() {
             </Tooltip>
           </TooltipProvider>
 
-          {/* <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button variant="outline" size="icon">
-                  <CirclePlus className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider> */}
 
           <TooltipProvider>
             <Tooltip>
@@ -371,18 +359,6 @@ export default function ATMTable() {
             </Tooltip>
           </TooltipProvider>
 
-          {/* <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button variant="outline" size="icon">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Search</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider> */}
         </div>
       </div>
 
