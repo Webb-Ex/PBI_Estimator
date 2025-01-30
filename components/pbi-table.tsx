@@ -277,7 +277,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { ChevronDown, Heart, Search } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Input } from "./ui/input";
 import { Button } from "@/components/ui/button";
@@ -299,12 +299,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@radix-ui/react-select";
 
 export default function PBITable() {
   const [tableData, setTableData] = React.useState<any[]>([]);
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [position, setPosition] = React.useState("bottom");
+  const [selectedValue, setSelectedValue] = React.useState("10");
   const itemsPerPage = 10;
 
   // Dummy data
@@ -353,6 +356,83 @@ export default function PBITable() {
       state: "Active",
       like: 20,
     },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
+    {
+      assignedTo: "Jane Doe",
+      createdBy: "Bob Johnson",
+      name: "Task 4",
+      description: "Description of Task 2",
+      tSize: "Medium",
+      severity: "High",
+      createdAt: "2025-01-28",
+      state: "Active",
+      like: 20,
+    },
   ];
 
   React.useEffect(() => {
@@ -383,7 +463,11 @@ export default function PBITable() {
     <>
       <div className="w-full flex justify-between mb-3 px-1">
         <div>
-          <Input placeholder="Search..." />
+          {/* <Input placeholder="Search..." /> */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search..." className="pl-9" />
+          </div>
         </div>
         <div>
           <DropdownMenu>
@@ -412,7 +496,6 @@ export default function PBITable() {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          
         </div>
       </div>
       <Card>
@@ -422,21 +505,22 @@ export default function PBITable() {
               <Table className="m-0 ">
                 <TableHeader className="bg-gray-100 uppercase ">
                   <TableRow className="border-none ">
-                    <TableHead className="w-[50px] rounded-tl-xl rounded-bl-xl">
+                    <TableHead className="w-[50px] rounded-tl-lg rounded-bl-lg">
                       <Checkbox
                         checked={selectedRows.length === paginatedData.length}
                         onCheckedChange={toggleAllRows}
                       />
                     </TableHead>
-                    <TableHead className="font-bold text-gray-700">Assigned To</TableHead>
-                    <TableHead className="font-bold text-gray-700">Name</TableHead>
-                    <TableHead className="font-bold text-gray-700">Description</TableHead>
-                    <TableHead className="font-bold text-gray-700">Created By</TableHead>
-                    <TableHead className="font-bold text-gray-700">T-size</TableHead>
-                    <TableHead className="font-bold text-gray-700">Severity</TableHead>
-                    <TableHead className="font-bold text-gray-700">Created At</TableHead>
-                    <TableHead className="font-bold text-gray-700">State</TableHead>
-                    <TableHead className="font-bold rounded-br-xl rounded-tr-xl text-gray-700">
+                    <TableHead className="font-bold text-gray-700">
+                      Name
+                    </TableHead>
+                    <TableHead className="font-bold text-gray-700">
+                      Description
+                    </TableHead>
+                    <TableHead className="font-bold text-gray-700">
+                      T-size
+                    </TableHead>
+                    <TableHead className="font-bold rounded-br-lg rounded-tr-lg text-gray-700">
                       Like
                     </TableHead>
                   </TableRow>
@@ -455,27 +539,14 @@ export default function PBITable() {
                         <TableCell>
                           <Checkbox
                             checked={selectedRows.includes(String(index))}
-                            onCheckedChange={() => toggleRowSelection(String(index))}
+                            onCheckedChange={() =>
+                              toggleRowSelection(String(index))
+                            }
                           />
-                        </TableCell>
-                        <TableCell className="flex items-center gap-1">
-                          <Avatar className="h-8 w-8 rounded-lg">
-                            <AvatarFallback className="rounded-full">JD</AvatarFallback>
-                          </Avatar>
-                          {row.assignedTo}
                         </TableCell>
                         <TableCell>{row.name}</TableCell>
                         <TableCell>{row.description}</TableCell>
-                        <TableCell className="flex items-center gap-1">
-                          <Avatar className="h-8 w-8 rounded-lg">
-                            <AvatarFallback className="rounded-full">AS</AvatarFallback>
-                          </Avatar>
-                          {row.createdBy}
-                        </TableCell>
                         <TableCell>{row.tSize}</TableCell>
-                        <TableCell>{row.severity}</TableCell>
-                        <TableCell>{row.createdAt}</TableCell>
-                        <TableCell>{row.state}</TableCell>
                         <TableCell className="flex items-center gap-1">
                           <Heart /> {row.like}
                         </TableCell>
@@ -486,38 +557,66 @@ export default function PBITable() {
               </Table>
             </div>
 
-            <div className="py-3">
-              {/* <div>
-                Items Per Page 
-              </div> */}
-              <Pagination className="justify-end">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    />
-                  </PaginationItem>
-                  {[...Array(totalPages)].map((_, pageIndex) => (
-                    <PaginationItem key={pageIndex}>
-                      <PaginationLink
-                        href="#"
-                        isActive={currentPage === pageIndex + 1}
-                        onClick={() => setCurrentPage(pageIndex + 1)}
+            <div className="flex items-center justify-between pt-3">
+              <div className="flex gap-2 items-center">
+                <p className="text-sm">Items Per Page</p>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 px-2 py-1"
+                    >
+                      {selectedValue} <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-5">
+                    {[10, 20, 30].map((value) => (
+                      <DropdownMenuItem
+                        key={value}
+                        onClick={() => setSelectedValue(value.toString())}
                       >
-                        {pageIndex + 1}
-                      </PaginationLink>
+                        {value}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div>
+                <Pagination className="justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
+                      />
                     </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                    {[...Array(totalPages)].map((_, pageIndex) => (
+                      <PaginationItem key={pageIndex}>
+                        <PaginationLink
+                          href="#"
+                          isActive={currentPage === pageIndex + 1}
+                          onClick={() => setCurrentPage(pageIndex + 1)}
+                        >
+                          {pageIndex + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1)
+                          )
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -525,5 +624,3 @@ export default function PBITable() {
     </>
   );
 }
-
-
