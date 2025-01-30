@@ -33,7 +33,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Image height={130} width={130} alt="logo" src={Logo}></Image>
         </div>
         <Separator className="my-1" />
-        <TeamSwitcher teams={solutionItems} />
+        {/* <TeamSwitcher teams={solutionItems} /> */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />

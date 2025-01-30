@@ -34,7 +34,7 @@ export function NavMain({
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>ATM Manager</SidebarGroupLabel>
+      <SidebarGroupLabel>PBI Manager</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible
