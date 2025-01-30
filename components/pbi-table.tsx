@@ -10,12 +10,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Heart, Search } from "lucide-react";
+import { ChevronDown, Heart, Search, TrendingUp } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Input } from "./ui/input"
+import { Input } from "./ui/input";
 
 import {
   Pagination,
@@ -33,10 +40,16 @@ import {
   SelectItem,
   SelectLabel,
   SelectValue,
-  SelectTrigger
+  SelectTrigger,
 } from "./ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
+import { Label } from "./ui/label";
 
 export default function PBITable() {
   const [tableData, setTableData] = useState<any[]>([]);
@@ -196,29 +209,76 @@ export default function PBITable() {
 
   return (
     <>
-      <div className="w-full flex justify-between mb-3 px-1">
-        <div>
-          {/* <Input placeholder="Search..." /> */}
+      <div className="w-full mb-3 px-1">
+        <div className="flex mb-3 gap-3 w-full">
+          <Card className="w-[40%]">
+            <CardHeader>
+              <CardTitle>Area Chart - Stacked</CardTitle>
+              <CardDescription>
+                Showing total visitors for the last 6 months
+              </CardDescription>
+            </CardHeader>
+            <CardContent></CardContent>
+            <CardFooter>
+              <div className="flex w-full items-start gap-2 text-sm">
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2 font-medium leading-none">
+                    Trending up by 5.2% this month{" "}
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-center gap-2 leading-none text-muted-foreground">
+                    January - June 2024
+                  </div>
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
+          <Card className="w-[30%]">
+            <CardHeader>
+              <CardTitle>Area Chart - Stacked</CardTitle>
+              <CardDescription>
+                Showing total visitors for the last 6 months
+              </CardDescription>
+            </CardHeader>
+            <CardContent></CardContent>
+            <CardFooter>
+              <div className="flex w-full items-start gap-2 text-sm">
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2 font-medium leading-none">
+                    Trending up by 5.2% this month{" "}
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-center gap-2 leading-none text-muted-foreground">
+                    January - June 2024
+                  </div>
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <div className="flex justify-between">
           <div className="relative flex items-center">
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search..." className="pl-9" />
           </div>
-        </div>
-        <div>
-          <Select>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select a product" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Products</SelectLabel>
-                <SelectItem value="apple">Digital Banking</SelectItem>
-                <SelectItem value="banana">Mobile Money</SelectItem>
-                <SelectItem value="blueberry">Sparrow</SelectItem>
-                <SelectItem value="grapes">Bill Payments</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+
+          <div>
+            <Select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select a product" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Products</SelectLabel>
+                  <SelectItem value="apple">Digital Banking</SelectItem>
+                  <SelectItem value="banana">Mobile Money</SelectItem>
+                  <SelectItem value="blueberry">Sparrow</SelectItem>
+                  <SelectItem value="grapes">Bill Payments</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       <Card>
