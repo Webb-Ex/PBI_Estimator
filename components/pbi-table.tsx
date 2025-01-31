@@ -48,6 +48,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "./ui/drawer";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 
@@ -235,25 +245,66 @@ export default function PBITable() {
           </Card>
           <Card className="w-[30%]">
             <CardHeader>
-              <CardTitle>Area Chart - Stacked</CardTitle>
-              <CardDescription>
-                Showing total visitors for the last 6 months
-              </CardDescription>
-            </CardHeader>
-            <CardContent></CardContent>
-            <CardFooter>
-              <div className="flex w-full items-start gap-2 text-sm">
-                <div className="grid gap-2">
-                  <div className="flex items-center gap-2 font-medium leading-none">
-                    Trending up by 5.2% this month{" "}
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <div className="flex items-center gap-2 leading-none text-muted-foreground">
-                    January - June 2024
-                  </div>
+              <CardTitle>
+                <div className="flex justify-between items-center">
+                    <h1>T-Sizing Details</h1>
+                    {/* <Drawer>
+                      <DrawerTrigger asChild>
+                        <Button variant="outline">Open Drawer</Button>
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <div className="mx-auto w-full max-w-sm">
+                          <DrawerHeader>
+                            <DrawerTitle>T-Size</DrawerTitle>
+                            <DrawerDescription></DrawerDescription>
+                          </DrawerHeader>
+
+                          <DrawerFooter>
+                            <DrawerClose asChild>
+                              <Button variant="outline">Cancel</Button>
+                            </DrawerClose>
+                          </DrawerFooter>
+                        </div>
+                      </DrawerContent>
+                    </Drawer> */}
                 </div>
-              </div>
-            </CardFooter>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+               <div className="flex flex-col gap-2">
+                <div className="flex gap-6 items-center">
+                  <span className="w-4 h-4 rounded-full bg-[#6E8E59] p-1"></span>
+                  <span className="text-gray-600">XS</span>
+                  <span className="text-gray-600">Extra Small</span>
+                  <span>16 Days</span>
+                </div>
+                <div className="flex gap-6 items-center">
+                <span className="w-4 h-4 rounded-full bg-[#DE3163] p-1"></span>
+                  <span className="text-gray-600">SM</span>
+                  <span className="text-gray-600">Small</span>
+                  <span>30 Days</span>
+                </div>
+                <div className="flex gap-6 items-center">
+                <span className="w-4 h-4 rounded-full bg-[#493D9E] p-1"></span>
+                  <span className="text-gray-600">MD</span>
+                  <span className="text-gray-600">Medium</span>
+                  <span>45 Days</span>
+                </div>
+                <div className="flex gap-6 items-center">
+                <span className="w-4 h-4 rounded-full bg-[#543A14] p-1"></span>
+                  <span className="text-gray-600">LG</span>
+                  <span className="text-gray-600">Large</span>
+                  <span>70 Days</span>
+                </div>
+                <div className="flex gap-6 items-center">
+                <span className="w-4 h-4 rounded-full bg-[#727D73] p-1"></span>
+                  <span className="text-gray-600">XL</span>
+                  <span className="text-gray-600">Extra Large</span>
+                  <span>120 Days</span>
+                </div>
+              </div> 
+            </CardContent>
+            <CardFooter></CardFooter>
           </Card>
         </div>
 
@@ -262,7 +313,7 @@ export default function PBITable() {
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search..." className="pl-9" />
           </div>
-
+              
           <div>
             <Select>
               <SelectTrigger className="w-[180px]">
