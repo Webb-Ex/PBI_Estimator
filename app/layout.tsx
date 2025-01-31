@@ -13,6 +13,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CommandMenu } from "@/components/command-menu";
 import "./globals.css";
 import SocketConnection from "@/components/connection-status";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 // Fonts setup
 const geistSans = Geist({
@@ -55,8 +61,15 @@ export default function CombinedLayout({
                   <SidebarTrigger className="-ml-1" />
                   <Separator orientation="vertical" className="mr-2 h-4" />
                   <DynamicBreadcrumb />
-                  <Separator orientation="vertical" className="mr-2 h-4" />
-                  <CommandMenu />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem>PBI</BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>PBI Management</BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                  {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
+                  {/* <CommandMenu /> */}
                 </div>
                 <div className="flex items-center gap-2">
                   {/* <SocketConnection /> */}

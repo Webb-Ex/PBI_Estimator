@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -29,6 +29,9 @@ import {
   MoreHorizontal,
   ArrowUpDown,
   X,
+  Hash,
+  CalendarClock,
+  Printer,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Input } from "./ui/input";
@@ -80,17 +83,74 @@ import {
   Row,
   useReactTable,
 } from "@tanstack/react-table";
+import { LikeButton } from "./like-button";
 
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+export const SIZE_MAPPING = {
+  small: "SM",
+  medium: "MD",
+  large: "LG",
+  "extra small": "XS",
+  "extra large": "XL",
+} as const;
+
+export const TSIZE_COLORS = {
+  XS: "#6E8E59",
+  SM: "#DE3163",
+  MD: "#493D9E",
+  LG: "#543A14",
+  XL: "#727D73",
+} as const;
+
+export const TSIZE_DAYS = {
+  XS: 16,
+  SM: 30,
+  MD: 45,
+  LG: 70,
+  XL: 120,
+} as const;
+
+export const SIZE_DISPLAY_NAMES = {
+  XS: "Extra Small",
+  SM: "Small",
+  MD: "Medium",
+  LG: "Large",
+  XL: "Extra Large",
+} as const;
+
+interface PBI {
+  id: string;
+  name: string;
+  description: string;
+  t_size: string;
+  likes: number;
+}
+
+interface RealtimePayload {
+  schema: string;
+  table: string;
+  commit_timestamp: string;
+  eventType: string;
+  new: PBI;
+  old: { id: string };
+  errors: null | any;
+}
+
+const updateLikes = async (id: string, currentLikes: number) => {
+  try {
+    const { data, error } = await supabase
+      .from("PBI")
+      .update({ likes: currentLikes + 1 })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error updating likes:", error);
+    return null;
+  }
+};
 
 export const columns: ColumnDef<any>[] = [
   {
@@ -127,14 +187,24 @@ export const columns: ColumnDef<any>[] = [
   },
   {
     accessorKey: "likes",
-    header: "Like",
+    header: "Likes",
     cell: ({ row }) => (
-      <Button variant="ghost" size="sm">
-        <Heart /> {row.getValue("likes")}
-      </Button>
+      <LikeButton
+        likes={row.original.likes}
+        id={row.original.id}
+        onLike={async (id) => {
+          const currentLikes = row.original.likes;
+
+          const data = await updateLikes(id, Number(currentLikes));
+          if (!data) {
+            console.error("Failed to update likes");
+          }
+        }}
+      />
     ),
   },
 ];
+
 export default function PBITable() {
   const [tableData, setTableData] = useState<any[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -169,6 +239,29 @@ export default function PBITable() {
 
   useEffect(() => {
     fetchData();
+
+    const channel = supabase
+      .channel("public:PBI")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "PBI" },
+        (payload) => {
+          //console.log("Update payload:", payload);
+
+          setTableData((prevData) =>
+            prevData.map((row) =>
+              row.id === payload.new.id
+                ? { ...row, likes: payload.new.likes }
+                : row
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const totalPages = Math.ceil(tableData.length / itemsPerPage);
@@ -213,19 +306,189 @@ export default function PBITable() {
     setIsDrawerOpen(false); // Open the drawer
   };
 
+  const selectedRowNames = selectedRow.map((row) => row.getValue("name"));
+
+  const calculateMetrics = (selectedRows: any[]) => {
+    const totalFeatures = selectedRows.length;
+
+    const totalTSizeDays = selectedRows.reduce((total, row) => {
+      try {
+        const dbSize =
+          (row
+            .getValue("t_size")
+            ?.toLowerCase() as keyof typeof SIZE_MAPPING) || "";
+        console.log("Raw size:", dbSize); // Debug log
+
+        if (!dbSize || !SIZE_MAPPING[dbSize]) {
+          console.warn(`Invalid size value: ${dbSize}`);
+          return total;
+        }
+
+        const mappedSize = SIZE_MAPPING[dbSize];
+        console.log(
+          "Mapped size:",
+          mappedSize,
+          "Days:",
+          TSIZE_DAYS[mappedSize]
+        ); // Debug log
+
+        return total + TSIZE_DAYS[mappedSize];
+      } catch (error) {
+        console.error("Error calculating T-Size:", error);
+        return total;
+      }
+    }, 0);
+
+    return {
+      totalFeatures,
+      totalTSizeDays: totalTSizeDays || 0,
+    };
+  };
+
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useCallback(() => {
+    try {
+      // Use ref instead of querySelector
+      const drawerContent = drawerRef.current;
+      if (!drawerContent) {
+        console.error("Drawer content not found");
+        return;
+      }
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        console.error("Could not open print window");
+        return;
+      }
+
+      // Get all stylesheet links
+      const styleSheets = Array.from(document.styleSheets)
+        .map((styleSheet) => {
+          try {
+            return Array.from(styleSheet.cssRules)
+              .map((rule) => rule.cssText)
+              .join("");
+          } catch (e) {
+            return "";
+          }
+        })
+        .join("");
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Print Preview</title>
+            <style>
+              ${styleSheets}
+              body {
+                padding: 20px;
+                font-family: system-ui, -apple-system, sans-serif;
+              }
+              @media print {
+                .no-print {
+                  display: none !important;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${drawerContent.outerHTML}
+            <script>
+              window.onload = function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                }
+              }
+            </script>
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+    } catch (error) {
+      console.error("Print error:", error);
+    }
+  }, []);
+
   return (
     <>
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="h-full">
+        <DrawerContent className="h-full" ref={drawerRef}>
           <DrawerHeader className="flex justify-between">
             <div className="">
-            <DrawerTitle>Selected PBIs</DrawerTitle>
-            <DrawerDescription>Items</DrawerDescription>
+              <DrawerTitle>Selected PBIs</DrawerTitle>
+              <DrawerDescription>Items</DrawerDescription>
             </div>
-            <Button className="py-2 px-2" variant="outline" onClick={handleDrawerClose}>
-            <X />
-          </Button>
+
+            <div className="flex gap-2">
+              <Button
+                className="py-2 px-2 no-print"
+                variant="outline"
+                onClick={handlePrint}
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
+              <Button
+                className="py-2 px-2 no-print"
+                variant="outline"
+                onClick={handleDrawerClose}
+              >
+                <X />
+              </Button>
+            </div>
           </DrawerHeader>
+
+          <div className="p-4 flex gap-2">
+            <Card className="w-[25%]">
+              <CardHeader className="pb-3">
+                <CardTitle>
+                  <div className="flex justify-between items-center">
+                    <h1 className="tracking-tight text-sm font-medium">
+                      Features Selected
+                    </h1>
+                    <Hash width={15} height={15} className="text-gray-600" />
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="">
+                  <h1 className="text-2xl font-bold">
+                    {calculateMetrics(selectedRow).totalFeatures}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    +20.1% from last month
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="w-[25%]">
+              <CardHeader className="pb-3">
+                <CardTitle>
+                  <div className="flex justify-between items-center">
+                    <h1 className="tracking-tight text-sm font-medium">
+                      Total T-Size
+                    </h1>
+                    <CalendarClock
+                      width={15}
+                      height={15}
+                      className="text-gray-600"
+                    />
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="">
+                  <h1 className="text-2xl font-bold">
+                    {calculateMetrics(selectedRow).totalTSizeDays}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">Days</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="p-4">
             <Table className="m-0">
@@ -236,7 +499,7 @@ export default function PBITable() {
                       key={column.id}
                       className={`font-bold text-gray-700 ${
                         index === 0
-                          ? "w-[50px] rounded-tl-lg rounded-bl-lg"
+                          ? " rounded-tl-lg rounded-bl-lg"
                           : index === columns.length - 2
                           ? "rounded-br-lg rounded-tr-lg"
                           : ""
@@ -298,99 +561,83 @@ export default function PBITable() {
               <div className="flex justify-between items-center">
                 <div className="">
                   <CardTitle>Available PBIs</CardTitle>
+                  <div className="flex w-full items-start gap-2 text-sm">
+                    <div className="grid gap-2">
+                      <div className="flex items-center gap-2 leading-none text-muted-foreground mt-2">
+                        Showing PBIs from all products <TrendingUp className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <Button className="p-3" onClick={handleOpenDrawer}>
                   <ExternalLink width={20} height={20} />
                 </Button>
               </div>
-              <CardDescription>
-                Showing total visitors for the last 6 months
-              </CardDescription>
+              {/* <CardDescription>All selected PBIs</CardDescription> */}
             </CardHeader>
             <Separator className="" />
             <CardContent className="p-6">
-              <div className="flex gap-1">
-                <Badge className="rounded-full"> Task1 </Badge>
-                <Badge className="rounded-full"> Task2 </Badge>
-                <Badge className="rounded-full"> Task3 </Badge>
+              <div className="flex gap-1 flex-wrap">
+                {selectedRow.length > 0 ? (
+                  selectedRow.map((row) => {
+                    const dbSize = (
+                      row.getValue("t_size") as string
+                    ).toLowerCase() as keyof typeof SIZE_MAPPING;
+                    const mappedSize = SIZE_MAPPING[dbSize];
+                    return (
+                      <Badge
+                        key={row.id}
+                        className="rounded-full"
+                        style={{ backgroundColor: TSIZE_COLORS[mappedSize] }}
+                      >
+                        {row.getValue("name")}
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No items selected
+                  </p>
+                )}
               </div>
             </CardContent>
-            <CardFooter>
-              <div className="flex w-full items-start gap-2 text-sm">
-                <div className="grid gap-2">
-                  <div className="flex items-center gap-2 font-medium leading-none">
-                    Trending up by 5.2% this month
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <div className="flex items-center gap-2 leading-none text-muted-foreground">
-                    Showing PBIs from all products
-                  </div>
-                </div>
-              </div>
-            </CardFooter>
           </Card>
           <Card className="w-[30%]">
             <CardHeader>
               <CardTitle>
                 <div className="flex justify-between items-center">
-                    <h1>T-Sizing Details</h1>
-                    {/* <Drawer>
-                      <DrawerTrigger asChild>
-                        <Button variant="outline">Open Drawer</Button>
-                      </DrawerTrigger>
-                      <DrawerContent>
-                        <div className="mx-auto w-full max-w-sm">
-                          <DrawerHeader>
-                            <DrawerTitle>T-Size</DrawerTitle>
-                            <DrawerDescription></DrawerDescription>
-                          </DrawerHeader>
-
-                          <DrawerFooter>
-                            <DrawerClose asChild>
-                              <Button variant="outline">Cancel</Button>
-                            </DrawerClose>
-                          </DrawerFooter>
-                        </div>
-                      </DrawerContent>
-                    </Drawer> */}
+                  <h1>T-Sizing Details</h1>
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="flex flex-col gap-2">
-                <div className="flex gap-6 items-center">
-                  <span className="w-4 h-4 rounded-full bg-[#6E8E59] p-1"></span>
-                  <span className="text-gray-600">XS</span>
-                  <span className="text-gray-600">Extra Small</span>
-                  <span>16 Days</span>
-                </div>
-                <div className="flex gap-6 items-center">
-                <span className="w-4 h-4 rounded-full bg-[#DE3163] p-1"></span>
-                  <span className="text-gray-600">SM</span>
-                  <span className="text-gray-600">Small</span>
-                  <span>30 Days</span>
-                </div>
-                <div className="flex gap-6 items-center">
-                <span className="w-4 h-4 rounded-full bg-[#493D9E] p-1"></span>
-                  <span className="text-gray-600">MD</span>
-                  <span className="text-gray-600">Medium</span>
-                  <span>45 Days</span>
-                </div>
-                <div className="flex gap-6 items-center">
-                <span className="w-4 h-4 rounded-full bg-[#543A14] p-1"></span>
-                  <span className="text-gray-600">LG</span>
-                  <span className="text-gray-600">Large</span>
-                  <span>70 Days</span>
-                </div>
-                <div className="flex gap-6 items-center">
-                <span className="w-4 h-4 rounded-full bg-[#727D73] p-1"></span>
-                  <span className="text-gray-600">XL</span>
-                  <span className="text-gray-600">Extra Large</span>
-                  <span>120 Days</span>
-                </div>
-              </div> 
+              <div className="flex flex-col gap-2">
+                {Object.entries(TSIZE_COLORS).map(([size, color]) => (
+                  <div
+                    key={size}
+                    className="flex gap-6 items-center justify-between"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <span
+                        className="w-4 h-4 rounded-full p-1"
+                        style={{ backgroundColor: color }}
+                      ></span>
+                      <span className="text-gray-600 text-xs">{size}</span>
+                      <span className="text-gray-600 text-sm">
+                        {
+                          SIZE_DISPLAY_NAMES[
+                            size as keyof typeof SIZE_DISPLAY_NAMES
+                          ]
+                        }
+                      </span>
+                    </div>
+                    <div className="font-bold">
+                      {TSIZE_DAYS[size as keyof typeof TSIZE_DAYS]} Days
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
-            <CardFooter></CardFooter>
           </Card>
         </div>
 
@@ -407,7 +654,7 @@ export default function PBITable() {
               }
             />
           </div>
-              
+
           <div>
             <Select>
               <SelectTrigger className="w-[180px]">

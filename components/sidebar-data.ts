@@ -1,10 +1,10 @@
 import { Boxes, Shield, Banknote, Calculator, PenIcon as UserPen, FolderKanban, Network, Wallet, Globe, SquareUser, Landmark, SmartphoneNfc, SquareTerminal, Receipt, MonitorIcon as MonitorCog, Hand, Handshake, Layers, LucideNotebookTabs, NotebookIcon } from 'lucide-react'
 
 export const userData = {
-  name: "Iris Admin",
-  email: "m@example.com",
+  name: "Fahad Khan",
+  email: "fahad@example.com",
   avatar: "/avatars/shadcn.jpg",
-  role: "Administrator"
+  role: "Product Manager"
 }
 
 export const solutionItems = [
