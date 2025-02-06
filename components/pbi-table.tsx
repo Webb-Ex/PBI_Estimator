@@ -32,6 +32,15 @@ import {
   Hash,
   CalendarClock,
   Printer,
+  ListChecks,
+  Clock,
+  TrendingDown,
+  BarChart3,
+  CalendarDays,
+  PieChart,
+  CircleDot,
+  Users,
+  Info,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Input } from "./ui/input";
@@ -53,6 +62,7 @@ import {
   SelectLabel,
   SelectValue,
   SelectTrigger,
+  SelectSeparator,
 } from "./ui/select";
 import {
   DropdownMenu,
@@ -84,6 +94,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { LikeButton } from "./like-button";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 
 export const SIZE_MAPPING = {
   small: "SM",
@@ -94,19 +105,19 @@ export const SIZE_MAPPING = {
 } as const;
 
 export const TSIZE_COLORS = {
-  XS: "#6E8E59",
-  SM: "#DE3163",
-  MD: "#493D9E",
-  LG: "#543A14",
-  XL: "#727D73",
+  XS: "#34b85c",
+  SM: "#5bbdde",
+  MD: "#eccc48",
+  LG: "#e16d6d",
+  XL: "#9a86eb",
 } as const;
 
 export const TSIZE_DAYS = {
-  XS: 16,
-  SM: 30,
-  MD: 45,
-  LG: 70,
-  XL: 120,
+  XS: 20,
+  SM: 60,
+  MD: 100,
+  LG: 150,
+  XL: 220,
 } as const;
 
 export const SIZE_DISPLAY_NAMES = {
@@ -115,6 +126,14 @@ export const SIZE_DISPLAY_NAMES = {
   MD: "Medium",
   LG: "Large",
   XL: "Extra Large",
+} as const;
+
+const SPRINT_DATA = {
+  XS: { sprints: 2, months: 1, range: "0-20" },
+  SM: { sprints: 6, months: 3, range: "21-60" },
+  MD: { sprints: 10, months: 5, range: "61-100" },
+  LG: { sprints: 15, months: 7.5, range: "101-150" },
+  XL: { sprints: 22, months: 11, range: "151-220" },
 } as const;
 
 interface PBI {
@@ -133,6 +152,30 @@ interface RealtimePayload {
   new: PBI;
   old: { id: string };
   errors: null | any;
+}
+
+function TSizeBadge({ size }: { size: string }) {
+  const normalizedSize = size.toLowerCase() as keyof typeof SIZE_MAPPING;
+  const mappedSize = SIZE_MAPPING[normalizedSize];
+  const days = TSIZE_DAYS[mappedSize];
+  const color = TSIZE_COLORS[mappedSize];
+
+  return (
+    <div className="relative group">
+      <Badge
+        className="rounded-full font-medium text-xs"
+        style={{
+          backgroundColor: color,
+          opacity: 0.9,
+        }}
+      >
+        {mappedSize}
+      </Badge>
+      <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 text-xs text-white px-2 py-1 rounded whitespace-nowrap z-50">
+        {days} Days - {SIZE_DISPLAY_NAMES[mappedSize]}
+      </div>
+    </div>
+  );
 }
 
 const updateLikes = async (id: string, currentLikes: number) => {
@@ -183,7 +226,7 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "t_size",
     header: "T-size",
-    cell: ({ row }) => <span>{row.getValue("t_size")}</span>,
+    cell: ({ row }) => <TSizeBadge size={row.getValue("t_size")} />,
   },
   {
     accessorKey: "likes",
@@ -420,7 +463,7 @@ export default function PBITable() {
           <DrawerHeader className="flex justify-between">
             <div className="">
               <DrawerTitle>Selected PBIs</DrawerTitle>
-              <DrawerDescription>Items</DrawerDescription>
+              {/* <DrawerDescription>Items</DrawerDescription> */}
             </div>
 
             <div className="flex gap-2">
@@ -441,122 +484,180 @@ export default function PBITable() {
             </div>
           </DrawerHeader>
 
-          <div className="p-4 flex gap-2">
-            <Card className="w-[25%]">
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <div className="flex justify-between items-center">
-                    <h1 className="tracking-tight text-sm font-medium">
-                      Features Selected
-                    </h1>
-                    <Hash width={15} height={15} className="text-gray-600" />
+          <div className="p-6 grid grid-cols-3 gap-6">
+            <Card className="group hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Selected Features
+                    </CardTitle>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold">
+                        {calculateMetrics(selectedRow).totalFeatures}
+                      </div>
+                      <div className="flex flex-col gap-1 mt-2">
+                        <Badge variant="secondary" className="text-xs w-fit text-nowrap">
+                          <CircleDot className="h-3 w-3 mr-1" />
+                          {selectedRow.length} of {tableData.length} items
+                        </Badge> 
+                      </div>
+                    </div>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="">
-                  <h1 className="text-2xl font-bold">
-                    {calculateMetrics(selectedRow).totalFeatures}
-                  </h1>
-                  <p className="text-xs text-muted-foreground">
-                    +20.1% from last month
-                  </p>
+                  <div className="h-10 w-10 rounded-full bg-violet-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ListChecks className="h-5 w-5 text-violet-600" />
+                  </div>
                 </div>
-              </CardContent>
+              </CardHeader>
             </Card>
-            <Card className="w-[25%]">
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <div className="flex justify-between items-center">
-                    <h1 className="tracking-tight text-sm font-medium">
-                      Total T-Size
-                    </h1>
-                    <CalendarClock
-                      width={15}
-                      height={15}
-                      className="text-gray-600"
-                    />
+
+            {/* Effort Card */}
+            <Card className="group hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Total Effort
+                    </CardTitle>
+                    <div className="mt-4">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold">
+                          {calculateMetrics(selectedRow).totalTSizeDays}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          days
+                        </span>
+                      </div>
+                      <div className="flex flex-row gap-1 mt-2">
+                        <Badge variant="secondary" className="text-xs w-fit text-nowrap">
+                          <Clock className="h-3 w-3 mr-1" />~
+                          {Math.ceil(
+                            calculateMetrics(selectedRow).totalTSizeDays / 30
+                          )}{" "}
+                          months
+                        </Badge>
+                        <Badge variant="outline" className="text-xs w-fit text-nowrap">
+                          {Math.ceil(
+                            calculateMetrics(selectedRow).totalTSizeDays / 10
+                          )}{" "}
+                          sprints
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="">
-                  <h1 className="text-2xl font-bold">
-                    {calculateMetrics(selectedRow).totalTSizeDays}
-                  </h1>
-                  <p className="text-xs text-muted-foreground">Days</p>
+                  <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <CalendarDays className="h-5 w-5 text-amber-600" />
+                  </div>
                 </div>
-              </CardContent>
+              </CardHeader>
+            </Card>
+
+            {/* Resource Allocation Card */}
+            <Card className="group hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Resource Planning
+                    </CardTitle>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold">
+                        {Math.max(
+                          ...selectedRow.map((row) => {
+                            const tSize = row.getValue("t_size") as string;
+                            const sizeKey = tSize.toLowerCase() as keyof typeof SIZE_MAPPING;
+                            const size = SIZE_MAPPING[sizeKey];
+                            return SPRINT_DATA[size as keyof typeof SPRINT_DATA].months;
+                          })
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 mt-2">
+                        <Badge variant="secondary" className="text-xs w-fit text-nowrap">
+                          <Users className="h-3 w-3 mr-1" />
+                          Max months per resource
+                        </Badge>
+                        
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Selected Items Table */}
+            <Card className="col-span-full">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="font-medium">Name</TableHead>
+                    <TableHead className="font-medium">Description</TableHead>
+                    <TableHead className="font-medium w-[10%]">
+                      T-Size
+                    </TableHead>
+                    <TableHead className="font-medium w-[15%]">
+                      Effort
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <AnimatePresence mode="wait">
+                    {selectedRow.length > 0 ? (
+                      selectedRow.map((row) => {
+                        const dbSize = (
+                          row.getValue("t_size") as string
+                        ).toLowerCase() as keyof typeof SIZE_MAPPING;
+                        const mappedSize = SIZE_MAPPING[dbSize];
+                        const effortDays =
+                          TSIZE_DAYS[mappedSize as keyof typeof TSIZE_DAYS];
+
+                        return (
+                          <motion.tr
+                            key={row.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="border-b hover:bg-slate-50"
+                          >
+                            <TableCell>{row.getValue("name")}</TableCell>
+                            <TableCell>{row.getValue("description")}</TableCell>
+                            <TableCell>
+                              <TSizeBadge size={row.getValue("t_size")} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                <span>{effortDays} days</span>
+                              </div>
+                            </TableCell>
+                          </motion.tr>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="h-24 text-center text-muted-foreground"
+                        >
+                          No items selected
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
             </Card>
           </div>
 
-          <div className="p-4">
-            <Table className="m-0">
-              <TableHeader className="bg-gray-100 uppercase">
-                <TableRow className="border-none">
-                  {columns.slice(1).map((column, index) => (
-                    <TableHead
-                      key={column.id}
-                      className={`font-bold text-gray-700 ${
-                        index === 0
-                          ? " rounded-tl-lg rounded-bl-lg"
-                          : index === columns.length - 2
-                          ? "rounded-br-lg rounded-tr-lg"
-                          : ""
-                      }`}
-                    >
-                      {typeof column.header === "string"
-                        ? column.header
-                        : column.id}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <AnimatePresence>
-                  {selectedRow.length > 0 ? (
-                    selectedRow.map((row) => (
-                      <motion.tr
-                        key={row.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3 }}
-                        className="border-b"
-                      >
-                        {row
-                          .getVisibleCells()
-                          .slice(1)
-                          .map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                      </motion.tr>
-                    ))
-                  ) : (
-                    <TableRow className="text-center">
-                      <TableCell
-                        colSpan={columns.length - 1}
-                        className="h-24 py-3 text-gray-500"
-                      >
-                        No rows selected.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </AnimatePresence>
-              </TableBody>
-            </Table>
-          </div>
           <DrawerFooter></DrawerFooter>
         </DrawerContent>
       </Drawer>
       <div className="w-full mb-3 px-1">
         <div className="flex mb-3 gap-3 w-full">
-          <Card className="w-[40%]">
+          {/* <Card className="w-[40%]">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <div className="">
@@ -564,7 +665,8 @@ export default function PBITable() {
                   <div className="flex w-full items-start gap-2 text-sm">
                     <div className="grid gap-2">
                       <div className="flex items-center gap-2 leading-none text-muted-foreground mt-2">
-                        Showing PBIs from all products <TrendingUp className="h-4 w-4" />
+                        Showing PBIs from all products{" "}
+                        <TrendingUp className="h-4 w-4" />
                       </div>
                     </div>
                   </div>
@@ -573,7 +675,7 @@ export default function PBITable() {
                   <ExternalLink width={20} height={20} />
                 </Button>
               </div>
-              {/* <CardDescription>All selected PBIs</CardDescription> */}
+
             </CardHeader>
             <Separator className="" />
             <CardContent className="p-6">
@@ -601,8 +703,8 @@ export default function PBITable() {
                 )}
               </div>
             </CardContent>
-          </Card>
-          <Card className="w-[30%]">
+          </Card> */}
+          {/* <Card className="w-[30%]">
             <CardHeader>
               <CardTitle>
                 <div className="flex justify-between items-center">
@@ -638,7 +740,7 @@ export default function PBITable() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         <div className="flex justify-between">
@@ -655,7 +757,41 @@ export default function PBITable() {
             />
           </div>
 
-          <div>
+          <Card className="flex items-center border-0 shadow-none">
+            <CardHeader className="">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                T-Size Scale
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="m-0 p-0">
+              <div className="flex items-center gap-3">
+                {Object.entries(TSIZE_COLORS).map(([size, color]) => (
+                  <div
+                    key={size}
+                    className="group relative flex items-center gap-1.5 px-2 py-1 rounded-full border border-slate-200 hover:border-slate-300 transition-colors bg-slate-50"
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full transition-transform group-hover:scale-110"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-xs font-medium">{size}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {TSIZE_DAYS[size as keyof typeof TSIZE_DAYS]}d
+                    </span>
+                    <div className="absolute -bottom-8 left-0 hidden group-hover:block bg-slate-900 text-xs text-white px-2 py-1 rounded whitespace-nowrap">
+                      {TSIZE_DAYS[size as keyof typeof TSIZE_DAYS] +
+                        " Days" +
+                        " - " +
+                        SIZE_DISPLAY_NAMES[
+                          size as keyof typeof SIZE_DISPLAY_NAMES
+                        ]}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <div className="flex items-center">
             <Select>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select a product" />
@@ -801,6 +937,54 @@ export default function PBITable() {
                   </PaginationContent>
                 </Pagination>
               </div>
+            </div>
+
+            <div className=" mt-3">
+              <Card className="w-full">
+                <CardContent className="p-4">
+                  <div className="flex items-center ">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <ListChecks className="h-4 w-4 text-violet-700" />
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm text-muted-foreground">
+                            Selected:
+                          </span>
+                          <span className="font-bold">
+                            {calculateMetrics(selectedRow).totalFeatures}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Separator orientation="vertical" className="h-4" />
+
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-amber-700" />
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm text-muted-foreground">
+                            Total Effort:
+                          </span>
+                          <span className="font-bold">
+                            {calculateMetrics(selectedRow).totalTSizeDays}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            days
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleOpenDrawer}
+                      className="ml-4"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </CardContent>

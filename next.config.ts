@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/", 
-        destination: "/ATMManager/ATM", 
+        destination: "/PBI", 
         permanent: true, 
       },
     ];
