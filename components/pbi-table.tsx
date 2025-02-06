@@ -144,6 +144,13 @@ interface PBI {
   likes: number;
 }
 
+interface PBILike {
+  pbi_id: string;
+  user_id: string;
+  like_count: number;
+  created_at: string;
+}
+
 interface RealtimePayload {
   schema: string;
   table: string;
@@ -178,17 +185,52 @@ function TSizeBadge({ size }: { size: string }) {
   );
 }
 
-const updateLikes = async (id: string, currentLikes: number) => {
+const updateLikes = async (pbiId: string, userId: string) => {
   try {
-    const { data, error } = await supabase
-      .from("PBI")
-      .update({ likes: currentLikes + 1 })
-      .eq("id", id)
-      .select()
+    // Check for existing like
+    const { data: existing, error: selectError } = await supabase
+      .from("pbi_likes")
+      .select("*")
+      .eq("pbi_id", pbiId)
+      .eq("user_id", userId)
       .single();
 
-    if (error) throw error;
-    return data;
+    if (selectError && selectError.code !== "PGRST116") {
+      throw selectError;
+    }
+
+    if (existing) {
+      let newCount = existing.like_count + 1;
+
+      console.log("newcount", existing.like_count, newCount);
+
+      const { data, error: updateError } = await supabase
+        .from("pbi_likes")
+        .update({
+          like_count: newCount,
+        })
+        .eq("id", existing.id)
+        .select();
+
+      if (updateError) throw updateError;
+      return data;
+    } else {
+      // Insert new like record
+      const { data, error: insertError } = await supabase
+        .from("pbi_likes")
+        .insert({
+          pbi_id: pbiId,
+          user_id: userId,
+          like_count: 1,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      console.log("Inserted new like:", data);
+      return data;
+    }
   } catch (error) {
     console.error("Error updating likes:", error);
     return null;
@@ -231,20 +273,23 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "likes",
     header: "Likes",
-    cell: ({ row }) => (
-      <LikeButton
-        likes={row.original.likes}
-        id={row.original.id}
-        onLike={async (id) => {
-          const currentLikes = row.original.likes;
-
-          const data = await updateLikes(id, Number(currentLikes));
-          if (!data) {
-            console.error("Failed to update likes");
-          }
-        }}
-      />
-    ),
+    cell: ({ row }) => {
+      // Replace this with the actual current user ID from your authentication context
+      const currentUserId = "f7ab4717-efdc-4579-a73a-5c2416d49ce3";
+      return (
+        <LikeButton
+          likes={row.original.likes}
+          id={row.original.id}
+          onLike={async (id) => {
+            // Pass the proper user id instead of Number(currentLikes)
+            const data = await updateLikes(id, currentUserId);
+            if (!data) {
+              console.error("Failed to update likes");
+            }
+          }}
+        />
+      );
+    },
   },
 ];
 
@@ -264,15 +309,28 @@ export default function PBITable() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from("PBI").select("*");
+      const [pbiResponse, likesResponse] = await Promise.all([
+        supabase.from("PBI").select("*"),
+        supabase.from("pbi_likes").select("pbi_id, like_count"),
+      ]);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (pbiResponse.error) throw pbiResponse.error;
+      if (likesResponse.error) throw likesResponse.error;
 
-      setTableData(data);
+      const aggregatedLikes = likesResponse.data.reduce(
+        (acc: Record<string, number>, curr) => {
+          acc[curr.pbi_id] = (acc[curr.pbi_id] || 0) + Number(curr.like_count);
+          return acc;
+        },
+        {}
+      );
 
-      console.log(data);
+      const mergedData = pbiResponse.data.map((pbi) => ({
+        ...pbi,
+        likes: aggregatedLikes[pbi.id] || 0,
+      }));
+
+      setTableData(mergedData);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -284,20 +342,13 @@ export default function PBITable() {
     fetchData();
 
     const channel = supabase
-      .channel("public:PBI")
+      .channel("public:pbi_likes")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "PBI" },
-        (payload) => {
-          //console.log("Update payload:", payload);
-
-          setTableData((prevData) =>
-            prevData.map((row) =>
-              row.id === payload.new.id
-                ? { ...row, likes: payload.new.likes }
-                : row
-            )
-          );
+        { event: "*", schema: "public", table: "pbi_likes" },
+        async () => {
+          // Refetch data to get updated aggregated likes
+          await fetchData();
         }
       )
       .subscribe();
@@ -497,10 +548,13 @@ export default function PBITable() {
                         {calculateMetrics(selectedRow).totalFeatures}
                       </div>
                       <div className="flex flex-col gap-1 mt-2">
-                        <Badge variant="secondary" className="text-xs w-fit text-nowrap">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs w-fit text-nowrap"
+                        >
                           <CircleDot className="h-3 w-3 mr-1" />
                           {selectedRow.length} of {tableData.length} items
-                        </Badge> 
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -529,14 +583,20 @@ export default function PBITable() {
                         </span>
                       </div>
                       <div className="flex flex-row gap-1 mt-2">
-                        <Badge variant="secondary" className="text-xs w-fit text-nowrap">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs w-fit text-nowrap"
+                        >
                           <Clock className="h-3 w-3 mr-1" />~
                           {Math.ceil(
                             calculateMetrics(selectedRow).totalTSizeDays / 30
                           )}{" "}
                           months
                         </Badge>
-                        <Badge variant="outline" className="text-xs w-fit text-nowrap">
+                        <Badge
+                          variant="outline"
+                          className="text-xs w-fit text-nowrap"
+                        >
                           {Math.ceil(
                             calculateMetrics(selectedRow).totalTSizeDays / 10
                           )}{" "}
@@ -565,18 +625,22 @@ export default function PBITable() {
                         {Math.max(
                           ...selectedRow.map((row) => {
                             const tSize = row.getValue("t_size") as string;
-                            const sizeKey = tSize.toLowerCase() as keyof typeof SIZE_MAPPING;
+                            const sizeKey =
+                              tSize.toLowerCase() as keyof typeof SIZE_MAPPING;
                             const size = SIZE_MAPPING[sizeKey];
-                            return SPRINT_DATA[size as keyof typeof SPRINT_DATA].months;
+                            return SPRINT_DATA[size as keyof typeof SPRINT_DATA]
+                              .months;
                           })
                         )}
                       </div>
                       <div className="flex flex-col gap-1 mt-2">
-                        <Badge variant="secondary" className="text-xs w-fit text-nowrap">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs w-fit text-nowrap"
+                        >
                           <Users className="h-3 w-3 mr-1" />
                           Max months per resource
                         </Badge>
-                        
                       </div>
                     </div>
                   </div>
