@@ -1,11 +1,32 @@
-import { Boxes, Shield, Banknote, Calculator, PenIcon as UserPen, FolderKanban, Network, Wallet, Globe, SquareUser, Landmark, SmartphoneNfc, SquareTerminal, Receipt, MonitorIcon as MonitorCog, Hand, Handshake, Layers, LucideNotebookTabs, NotebookIcon } from 'lucide-react'
+import {
+  Boxes,
+  Shield,
+  Banknote,
+  Calculator,
+  PenIcon as UserPen,
+  FolderKanban,
+  Network,
+  Wallet,
+  Globe,
+  SquareUser,
+  Landmark,
+  SmartphoneNfc,
+  SquareTerminal,
+  Receipt,
+  MonitorIcon as MonitorCog,
+  Hand,
+  Handshake,
+  Layers,
+  LucideNotebookTabs,
+  NotebookIcon,
+} from "lucide-react";
 
 export const userData = {
-  name: "Fahad Khan",
-  email: "fahad@example.com",
+  name: "Adeel Siddiqui",
+  email: "adeel.siddiqui@tpsonline.com",
   avatar: "/avatars/shadcn.jpg",
-  role: "Product Manager"
-}
+  role: "Product Manager",
+};
 
 export const solutionItems = [
   {
@@ -131,7 +152,7 @@ export const functionItems = [
     plan: "Enterprise",
     url: "#",
   },
-]
+];
 
 export const navMainItems = [
   {
@@ -145,10 +166,9 @@ export const navMainItems = [
         url: "/PBI",
       },
       {
-        title: "Assigned To Me",
-        url: "/ATMManager/ATM",
+        title: "Checkouts",
+        url: "/Checkouts",
       },
-      
     ],
-  }
-]
+  },
+];

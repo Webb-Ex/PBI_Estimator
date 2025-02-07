@@ -13,8 +13,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,27 +20,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
-  Heart,
   Search,
-  TrendingUp,
   ExternalLink,
-  MoreHorizontal,
-  ArrowUpDown,
   X,
-  Hash,
-  CalendarClock,
   Printer,
   ListChecks,
   Clock,
-  TrendingDown,
-  BarChart3,
   CalendarDays,
-  PieChart,
   CircleDot,
   Users,
-  Info,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Input } from "./ui/input";
 
 import {
@@ -62,7 +49,6 @@ import {
   SelectLabel,
   SelectValue,
   SelectTrigger,
-  SelectSeparator,
 } from "./ui/select";
 import {
   DropdownMenu,
@@ -72,16 +58,12 @@ import {
 } from "./ui/dropdown-menu";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
-  DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from "./ui/drawer";
 import { Button } from "./ui/button";
-import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
 import { supabase } from "@/lib/supabaseClient";
@@ -94,7 +76,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { LikeButton } from "./like-button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
+import { CheckoutDialog } from "./checkout-dialogue";
 
 export const SIZE_MAPPING = {
   small: "SM",
@@ -140,6 +122,7 @@ interface PBI {
   id: string;
   name: string;
   description: string;
+  product:string;
   t_size: string;
   likes: number;
 }
@@ -161,7 +144,9 @@ interface RealtimePayload {
   errors: null | any;
 }
 
-function TSizeBadge({ size }: { size: string }) {
+
+
+export function TSizeBadge({ size }: { size: string }) {
   const normalizedSize = size.toLowerCase() as keyof typeof SIZE_MAPPING;
   const mappedSize = SIZE_MAPPING[normalizedSize];
   const days = TSIZE_DAYS[mappedSize];
@@ -184,6 +169,7 @@ function TSizeBadge({ size }: { size: string }) {
     </div>
   );
 }
+
 
 const updateLikes = async (pbiId: string, userId: string) => {
   try {
@@ -266,6 +252,15 @@ export const columns: ColumnDef<any>[] = [
     cell: ({ row }) => <span>{row.getValue("description")}</span>,
   },
   {
+    accessorKey: "product",
+    header: "Product(s)",
+    cell: ({ row }) => (
+      <Badge variant="secondary" className="font-medium text-nowrap">
+        {row.getValue("product")}
+      </Badge>
+    ),
+  },
+  {
     accessorKey: "t_size",
     header: "T-size",
     cell: ({ row }) => <TSizeBadge size={row.getValue("t_size")} />,
@@ -296,15 +291,19 @@ export const columns: ColumnDef<any>[] = [
 export default function PBITable() {
   const [tableData, setTableData] = useState<any[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [position, setPosition] = useState("bottom");
   const [selectedValue, setSelectedValue] = useState("10");
   const [isLoading, setIsLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState({});
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const [selectedItems, setSelectedItems] = useState<Row<any>[]>([]);
-  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(30);
+
+  const handlePageChange = (page: number) => {
+    const validPage = Math.max(1, Math.min(page, totalPages));
+    setCurrentPage(validPage);
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -720,92 +719,14 @@ export default function PBITable() {
         </DrawerContent>
       </Drawer>
       <div className="w-full mb-3 px-1">
-        <div className="flex mb-3 gap-3 w-full">
-          {/* <Card className="w-[40%]">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <div className="">
-                  <CardTitle>Available PBIs</CardTitle>
-                  <div className="flex w-full items-start gap-2 text-sm">
-                    <div className="grid gap-2">
-                      <div className="flex items-center gap-2 leading-none text-muted-foreground mt-2">
-                        Showing PBIs from all products{" "}
-                        <TrendingUp className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Button className="p-3" onClick={handleOpenDrawer}>
-                  <ExternalLink width={20} height={20} />
-                </Button>
-              </div>
 
-            </CardHeader>
-            <Separator className="" />
-            <CardContent className="p-6">
-              <div className="flex gap-1 flex-wrap">
-                {selectedRow.length > 0 ? (
-                  selectedRow.map((row) => {
-                    const dbSize = (
-                      row.getValue("t_size") as string
-                    ).toLowerCase() as keyof typeof SIZE_MAPPING;
-                    const mappedSize = SIZE_MAPPING[dbSize];
-                    return (
-                      <Badge
-                        key={row.id}
-                        className="rounded-full"
-                        style={{ backgroundColor: TSIZE_COLORS[mappedSize] }}
-                      >
-                        {row.getValue("name")}
-                      </Badge>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No items selected
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card> */}
-          {/* <Card className="w-[30%]">
-            <CardHeader>
-              <CardTitle>
-                <div className="flex justify-between items-center">
-                  <h1>T-Sizing Details</h1>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-2">
-                {Object.entries(TSIZE_COLORS).map(([size, color]) => (
-                  <div
-                    key={size}
-                    className="flex gap-6 items-center justify-between"
-                  >
-                    <div className="flex gap-2 items-center">
-                      <span
-                        className="w-4 h-4 rounded-full p-1"
-                        style={{ backgroundColor: color }}
-                      ></span>
-                      <span className="text-gray-600 text-xs">{size}</span>
-                      <span className="text-gray-600 text-sm">
-                        {
-                          SIZE_DISPLAY_NAMES[
-                            size as keyof typeof SIZE_DISPLAY_NAMES
-                          ]
-                        }
-                      </span>
-                    </div>
-                    <div className="font-bold">
-                      {TSIZE_DAYS[size as keyof typeof TSIZE_DAYS]} Days
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card> */}
-        </div>
+        <CheckoutDialog
+          selectedRow={selectedRow}
+          tableData={tableData}
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          mode="checkout"
+        />
 
         <div className="flex justify-between">
           <div className="relative flex items-center">
@@ -867,7 +788,7 @@ export default function PBITable() {
                   <SelectItem value="Digital Banking">
                     Digital Banking
                   </SelectItem>
-                  <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                  <SelectItem value="Money">Money</SelectItem>
                   <SelectItem value="Sparrow">Sparrow</SelectItem>
                   <SelectItem value="Bill Payments">Bill Payments</SelectItem>
                 </SelectGroup>
@@ -1006,7 +927,7 @@ export default function PBITable() {
             <div className=" mt-3">
               <Card className="w-full">
                 <CardContent className="p-4">
-                  <div className="flex items-center ">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <ListChecks className="h-4 w-4 text-violet-700" />
@@ -1036,15 +957,22 @@ export default function PBITable() {
                           </span>
                         </div>
                       </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleOpenDrawer}
+                        className="ml-4"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
                     </div>
 
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleOpenDrawer}
-                      className="ml-4"
+                      onClick={() => setIsDialogOpen(true)}
+                      disabled={selectedRow.length === 0}
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      Proceed to checkout ({selectedRow.length})
                     </Button>
                   </div>
                 </CardContent>

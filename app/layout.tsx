@@ -20,6 +20,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
+import { Toaster } from "sonner";
+
 // Fonts setup
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -79,6 +81,7 @@ export default function CombinedLayout({
               <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
             </SidebarInset>
           </SidebarProvider>
+          <Toaster richColors closeButton position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>
