@@ -19,7 +19,8 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { SIZE_MAPPING, TSIZE_DAYS, TSizeBadge } from "./pbi-table";
+import { SIZE_MAPPING, TSIZE_DAYS } from "@/constants/constants";
+import { TSizeBadge } from "./tSizeBadge";
 import { supabase } from "@/lib/supabaseClient";
 
 import { toast } from "sonner";
@@ -93,18 +94,18 @@ export function CheckoutDialog({
   onOpenChange,
   mode,
 }: CheckoutDialogProps) {
-  const calculateMetrics = (selectedRows: Row<any>[]) => {
-    const totalFeatures = selectedRows.length;
-    const totalTSizeDays = selectedRows.reduce((total, row) => {
-      const dbSize = (
-        row.getValue("t_size") as string
-      )?.toLowerCase() as keyof typeof SIZE_MAPPING;
-      if (!dbSize || !SIZE_MAPPING[dbSize]) return total;
-      const mappedSize = SIZE_MAPPING[dbSize];
-      return total + TSIZE_DAYS[mappedSize];
-    }, 0);
-    return { totalFeatures, totalTSizeDays };
-  };
+  const calculateMetrics = (selectedRows: Row<any>[] = []) => {
+      const totalFeatures = selectedRows.length;
+      const totalTSizeDays = selectedRows.reduce((total, row) => {
+        const dbSize = (
+          row.getValue("t_size") as string
+        )?.toLowerCase() as keyof typeof SIZE_MAPPING;
+        if (!dbSize || !SIZE_MAPPING[dbSize]) return total;
+        const mappedSize = SIZE_MAPPING[dbSize];
+        return total + TSIZE_DAYS[mappedSize];
+      }, 0);
+      return { totalFeatures, totalTSizeDays };
+    };
 
   const [viewData, setViewData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -157,8 +158,8 @@ export function CheckoutDialog({
                   {calculateMetrics(selectedRow).totalFeatures}
                 </div>
                 <Badge variant="secondary" className="mt-2">
-                  <CircleDot className="h-3 w-3 mr-1" />
-                  {selectedRow.length} of {tableData.length} items
+                    <CircleDot className="h-3 w-3 mr-1" />
+                    {selectedRow?.length ?? 0} of {tableData?.length ?? 0} items
                 </Badge>
               </div>
             </CardHeader>
@@ -251,11 +252,11 @@ export function CheckoutDialog({
               try {
                 setIsLoading(true);
                 const userId = "f7ab4717-efdc-4579-a73a-5c2416d49ce3";
-                const checkout = await handleCheckout(selectedRow, userId);
+                const checkout = await handleCheckout(selectedRow ?? [], userId);
 
                 if (checkout) {
                   toast.success("Checkout Complete", {
-                    description: `Successfully checked out ${selectedRow.length} items`,
+                    description: `Successfully checked out ${selectedRow?.length ?? 0} items`,
                     action: {
                       label: "View Details",
                       onClick: () => router.push("/Checkouts"),
@@ -272,7 +273,7 @@ export function CheckoutDialog({
                 setIsLoading(false);
               }
             }}
-            disabled={selectedRow.length === 0 || isLoading}
+            disabled={(selectedRow?.length ?? 0) === 0 || isLoading}
           >
             {isLoading ? (
               <>
@@ -280,7 +281,7 @@ export function CheckoutDialog({
                 Processing...
               </>
             ) : (
-              `Checkout (${selectedRow.length})`
+              `Checkout (${selectedRow?.length ?? 0})`
             )}
           </Button>
         </DialogFooter>

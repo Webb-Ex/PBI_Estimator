@@ -1,7 +1,5 @@
-"use client";
-
 import * as React from "react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -22,24 +20,16 @@ import {
   ChevronDown,
   Search,
   ExternalLink,
-  X,
-  Printer,
   ListChecks,
   Clock,
-  CalendarDays,
-  CircleDot,
-  Users,
 } from "lucide-react";
 import { Input } from "./ui/input";
 
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
 } from "@/components/ui/pagination";
 import {
   Select,
@@ -56,119 +46,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "./ui/drawer";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import {
   ColumnDef,
+  FilterFnOption,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  Row,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { LikeButton } from "./like-button";
 import { CheckoutDialog } from "./checkout-dialogue";
+import { TSizeBadge } from "./tSizeBadge";
+import { calculateMetrics } from "@/lib/metrics";
+import { SelectedItemsDrawer } from "./selectedItemDrawer";
 
-export const SIZE_MAPPING = {
-  small: "SM",
-  medium: "MD",
-  large: "LG",
-  "extra small": "XS",
-  "extra large": "XL",
-} as const;
-
-export const TSIZE_COLORS = {
-  XS: "#34b85c",
-  SM: "#5bbdde",
-  MD: "#eccc48",
-  LG: "#e16d6d",
-  XL: "#9a86eb",
-} as const;
-
-export const TSIZE_DAYS = {
-  XS: 20,
-  SM: 60,
-  MD: 100,
-  LG: 150,
-  XL: 220,
-} as const;
-
-export const SIZE_DISPLAY_NAMES = {
-  XS: "Extra Small",
-  SM: "Small",
-  MD: "Medium",
-  LG: "Large",
-  XL: "Extra Large",
-} as const;
-
-const SPRINT_DATA = {
-  XS: { sprints: 2, months: 1, range: "0-20" },
-  SM: { sprints: 6, months: 3, range: "21-60" },
-  MD: { sprints: 10, months: 5, range: "61-100" },
-  LG: { sprints: 15, months: 7.5, range: "101-150" },
-  XL: { sprints: 22, months: 11, range: "151-220" },
-} as const;
-
-interface PBI {
-  id: string;
-  name: string;
-  description: string;
-  product:string;
-  t_size: string;
-  likes: number;
-}
-
-interface PBILike {
-  pbi_id: string;
-  user_id: string;
-  like_count: number;
-  created_at: string;
-}
-
-interface RealtimePayload {
-  schema: string;
-  table: string;
-  commit_timestamp: string;
-  eventType: string;
-  new: PBI;
-  old: { id: string };
-  errors: null | any;
-}
-
-
-
-export function TSizeBadge({ size }: { size: string }) {
-  const normalizedSize = size.toLowerCase() as keyof typeof SIZE_MAPPING;
-  const mappedSize = SIZE_MAPPING[normalizedSize];
-  const days = TSIZE_DAYS[mappedSize];
-  const color = TSIZE_COLORS[mappedSize];
-
-  return (
-    <div className="relative group">
-      <Badge
-        className="rounded-full font-medium text-xs"
-        style={{
-          backgroundColor: color,
-          opacity: 0.9,
-        }}
-      >
-        {mappedSize}
-      </Badge>
-      <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 text-xs text-white px-2 py-1 rounded whitespace-nowrap z-50">
-        {days} Days - {SIZE_DISPLAY_NAMES[mappedSize]}
-      </div>
-    </div>
-  );
-}
+import { PBI } from "@/constants/constants";
+import { TSizeScale } from "./TSizeScale";
+import { PBITableSkeleton } from "./skeletons/pbiTableSkeleton";
 
 
 const updateLikes = async (pbiId: string, userId: string) => {
@@ -223,7 +122,7 @@ const updateLikes = async (pbiId: string, userId: string) => {
   }
 };
 
-export const columns: ColumnDef<any>[] = [
+export const columns: ColumnDef<PBI, any>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -290,20 +189,13 @@ export const columns: ColumnDef<any>[] = [
 
 export default function PBITable() {
   const [tableData, setTableData] = useState<any[]>([]);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [selectedValue, setSelectedValue] = useState("10");
   const [isLoading, setIsLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [rowSelection, setRowSelection] = useState({});
+  const [productFilter, setProductFilter] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(30);
-
-  const handlePageChange = (page: number) => {
-    const validPage = Math.max(1, Math.min(page, totalPages));
-    setCurrentPage(validPage);
-  };
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filtering, setFiltering] = useState("");
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -357,367 +249,69 @@ export default function PBITable() {
     };
   }, []);
 
-  const totalPages = Math.ceil(tableData.length / itemsPerPage);
-  const paginatedData = tableData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const toggleRowSelection = (id: string) => {
-    setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAllRows = () => {
-    setSelectedRows((prev) =>
-      prev.length === tableData.length
-        ? []
-        : tableData.map((row, index) => String(index))
-    );
-  };
-
-  const table = useReactTable({
+  const table = useReactTable<PBI>({
     data: tableData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    // Add pagination state
     state: {
-      rowSelection,
+      globalFilter: filtering,
+      pagination: {
+        pageIndex: currentPage - 1, // TanStack Table uses 0-based index
+        pageSize: itemsPerPage,
+      },
     },
-    onRowSelectionChange: setRowSelection,
-    enableRowSelection: true,
+    // Add pagination functions
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: currentPage - 1,
+          pageSize: itemsPerPage,
+        });
+        setCurrentPage(newState.pageIndex + 1);
+        setItemsPerPage(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: setFiltering,
+    filterFns: {
+      fuzzy: (row, id, filterValue) => {
+        const name = row.getValue("name")?.toString().toLowerCase() || "";
+        const description = row.getValue("description")?.toString().toLowerCase() || "";
+        const searchTerm = filterValue.toLowerCase();
+        return name.includes(searchTerm) || description.includes(searchTerm);
+      },
+    },
+    globalFilterFn: 'fuzzy' as FilterFnOption<PBI>,
+    // Enable client-side pagination
+    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: false,
+    pageCount: Math.ceil(tableData.length / itemsPerPage),
   });
 
   const selectedRow = table.getFilteredSelectedRowModel().rows;
 
   const handleOpenDrawer = () => {
-    setIsDrawerOpen(true); // Open the drawer
+    setIsDrawerOpen(true);
   };
 
   const handleDrawerClose = () => {
-    setIsDrawerOpen(false); // Open the drawer
+    setIsDrawerOpen(false);
   };
 
-  const selectedRowNames = selectedRow.map((row) => row.getValue("name"));
-
-  const calculateMetrics = (selectedRows: any[]) => {
-    const totalFeatures = selectedRows.length;
-
-    const totalTSizeDays = selectedRows.reduce((total, row) => {
-      try {
-        const dbSize =
-          (row
-            .getValue("t_size")
-            ?.toLowerCase() as keyof typeof SIZE_MAPPING) || "";
-        console.log("Raw size:", dbSize); // Debug log
-
-        if (!dbSize || !SIZE_MAPPING[dbSize]) {
-          console.warn(`Invalid size value: ${dbSize}`);
-          return total;
-        }
-
-        const mappedSize = SIZE_MAPPING[dbSize];
-        console.log(
-          "Mapped size:",
-          mappedSize,
-          "Days:",
-          TSIZE_DAYS[mappedSize]
-        ); // Debug log
-
-        return total + TSIZE_DAYS[mappedSize];
-      } catch (error) {
-        console.error("Error calculating T-Size:", error);
-        return total;
-      }
-    }, 0);
-
-    return {
-      totalFeatures,
-      totalTSizeDays: totalTSizeDays || 0,
-    };
-  };
-
-  const drawerRef = useRef<HTMLDivElement>(null);
-
-  const handlePrint = useCallback(() => {
-    try {
-      // Use ref instead of querySelector
-      const drawerContent = drawerRef.current;
-      if (!drawerContent) {
-        console.error("Drawer content not found");
-        return;
-      }
-
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) {
-        console.error("Could not open print window");
-        return;
-      }
-
-      // Get all stylesheet links
-      const styleSheets = Array.from(document.styleSheets)
-        .map((styleSheet) => {
-          try {
-            return Array.from(styleSheet.cssRules)
-              .map((rule) => rule.cssText)
-              .join("");
-          } catch (e) {
-            return "";
-          }
-        })
-        .join("");
-
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Print Preview</title>
-            <style>
-              ${styleSheets}
-              body {
-                padding: 20px;
-                font-family: system-ui, -apple-system, sans-serif;
-              }
-              @media print {
-                .no-print {
-                  display: none !important;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            ${drawerContent.outerHTML}
-            <script>
-              window.onload = function() {
-                window.print();
-                window.onafterprint = function() {
-                  window.close();
-                }
-              }
-            </script>
-          </body>
-        </html>
-      `);
-
-      printWindow.document.close();
-    } catch (error) {
-      console.error("Print error:", error);
-    }
-  }, []);
+  if (isLoading) {
+    return <PBITableSkeleton />
+  }
 
   return (
     <>
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="h-full" ref={drawerRef}>
-          <DrawerHeader className="flex justify-between">
-            <div className="">
-              <DrawerTitle>Selected PBIs</DrawerTitle>
-              {/* <DrawerDescription>Items</DrawerDescription> */}
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                className="py-2 px-2 no-print"
-                variant="outline"
-                onClick={handlePrint}
-              >
-                <Printer className="h-4 w-4" />
-              </Button>
-              <Button
-                className="py-2 px-2 no-print"
-                variant="outline"
-                onClick={handleDrawerClose}
-              >
-                <X />
-              </Button>
-            </div>
-          </DrawerHeader>
-
-          <div className="p-6 grid grid-cols-3 gap-6">
-            <Card className="group hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Selected Features
-                    </CardTitle>
-                    <div className="mt-4">
-                      <div className="text-3xl font-bold">
-                        {calculateMetrics(selectedRow).totalFeatures}
-                      </div>
-                      <div className="flex flex-col gap-1 mt-2">
-                        <Badge
-                          variant="secondary"
-                          className="text-xs w-fit text-nowrap"
-                        >
-                          <CircleDot className="h-3 w-3 mr-1" />
-                          {selectedRow.length} of {tableData.length} items
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-violet-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ListChecks className="h-5 w-5 text-violet-600" />
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Effort Card */}
-            <Card className="group hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Total Effort
-                    </CardTitle>
-                    <div className="mt-4">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold">
-                          {calculateMetrics(selectedRow).totalTSizeDays}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          days
-                        </span>
-                      </div>
-                      <div className="flex flex-row gap-1 mt-2">
-                        <Badge
-                          variant="secondary"
-                          className="text-xs w-fit text-nowrap"
-                        >
-                          <Clock className="h-3 w-3 mr-1" />~
-                          {Math.ceil(
-                            calculateMetrics(selectedRow).totalTSizeDays / 30
-                          )}{" "}
-                          months
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="text-xs w-fit text-nowrap"
-                        >
-                          {Math.ceil(
-                            calculateMetrics(selectedRow).totalTSizeDays / 10
-                          )}{" "}
-                          sprints
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <CalendarDays className="h-5 w-5 text-amber-600" />
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Resource Allocation Card */}
-            <Card className="group hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Resource Planning
-                    </CardTitle>
-                    <div className="mt-4">
-                      <div className="text-3xl font-bold">
-                        {Math.max(
-                          ...selectedRow.map((row) => {
-                            const tSize = row.getValue("t_size") as string;
-                            const sizeKey =
-                              tSize.toLowerCase() as keyof typeof SIZE_MAPPING;
-                            const size = SIZE_MAPPING[sizeKey];
-                            return SPRINT_DATA[size as keyof typeof SPRINT_DATA]
-                              .months;
-                          })
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-1 mt-2">
-                        <Badge
-                          variant="secondary"
-                          className="text-xs w-fit text-nowrap"
-                        >
-                          <Users className="h-3 w-3 mr-1" />
-                          Max months per resource
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Selected Items Table */}
-            <Card className="col-span-full">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead className="font-medium">Name</TableHead>
-                    <TableHead className="font-medium">Description</TableHead>
-                    <TableHead className="font-medium w-[10%]">
-                      T-Size
-                    </TableHead>
-                    <TableHead className="font-medium w-[15%]">
-                      Effort
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <AnimatePresence mode="wait">
-                    {selectedRow.length > 0 ? (
-                      selectedRow.map((row) => {
-                        const dbSize = (
-                          row.getValue("t_size") as string
-                        ).toLowerCase() as keyof typeof SIZE_MAPPING;
-                        const mappedSize = SIZE_MAPPING[dbSize];
-                        const effortDays =
-                          TSIZE_DAYS[mappedSize as keyof typeof TSIZE_DAYS];
-
-                        return (
-                          <motion.tr
-                            key={row.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2 }}
-                            className="border-b hover:bg-slate-50"
-                          >
-                            <TableCell>{row.getValue("name")}</TableCell>
-                            <TableCell>{row.getValue("description")}</TableCell>
-                            <TableCell>
-                              <TSizeBadge size={row.getValue("t_size")} />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                <span>{effortDays} days</span>
-                              </div>
-                            </TableCell>
-                          </motion.tr>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="h-24 text-center text-muted-foreground"
-                        >
-                          No items selected
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </AnimatePresence>
-                </TableBody>
-              </Table>
-            </Card>
-          </div>
-
-          <DrawerFooter></DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+      <SelectedItemsDrawer
+        isOpen={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        selectedRows={selectedRow}
+        tableData={tableData}
+        onClose={handleDrawerClose}
+      />
       <div className="w-full mb-3 px-1">
 
         <CheckoutDialog
@@ -742,42 +336,15 @@ export default function PBITable() {
             />
           </div>
 
-          <Card className="flex items-center border-0 shadow-none">
-            <CardHeader className="">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                T-Size Scale
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="m-0 p-0">
-              <div className="flex items-center gap-3">
-                {Object.entries(TSIZE_COLORS).map(([size, color]) => (
-                  <div
-                    key={size}
-                    className="group relative flex items-center gap-1.5 px-2 py-1 rounded-full border border-slate-200 hover:border-slate-300 transition-colors bg-slate-50"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full transition-transform group-hover:scale-110"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="text-xs font-medium">{size}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      {TSIZE_DAYS[size as keyof typeof TSIZE_DAYS]}d
-                    </span>
-                    <div className="absolute -bottom-8 left-0 hidden group-hover:block bg-slate-900 text-xs text-white px-2 py-1 rounded whitespace-nowrap">
-                      {TSIZE_DAYS[size as keyof typeof TSIZE_DAYS] +
-                        " Days" +
-                        " - " +
-                        SIZE_DISPLAY_NAMES[
-                          size as keyof typeof SIZE_DISPLAY_NAMES
-                        ]}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <TSizeScale />
+          
           <div className="flex items-center">
-            <Select>
+            <Select value={productFilter}
+              onValueChange={(value) => {
+                setProductFilter(value);
+                // Fix: Use lowercase "all" and handle empty filter correctly
+                table.getColumn('product')?.setFilterValue(value.toLowerCase() === "all" ? "" : value);
+              }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select a product" />
               </SelectTrigger>
@@ -785,12 +352,11 @@ export default function PBITable() {
                 <SelectGroup>
                   <SelectLabel>Products</SelectLabel>
                   <SelectItem value="All">All</SelectItem>
-                  <SelectItem value="Digital Banking">
-                    Digital Banking
-                  </SelectItem>
-                  <SelectItem value="Money">Money</SelectItem>
-                  <SelectItem value="Sparrow">Sparrow</SelectItem>
-                  <SelectItem value="Bill Payments">Bill Payments</SelectItem>
+                  {Array.from(new Set(tableData.map(item => item.product))).map((product) => (
+                    <SelectItem key={product} value={product}>
+                      {product}
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -808,13 +374,12 @@ export default function PBITable() {
                       headerGroup.headers.map((header) => (
                         <TableHead
                           key={header.id}
-                          className={`font-bold text-gray-700 ${
-                            header.index === 0
-                              ? "w-[50px] rounded-tl-lg rounded-bl-lg"
-                              : header.index === headerGroup.headers.length - 1
+                          className={`font-bold text-gray-700 ${header.index === 0
+                            ? "w-[50px] rounded-tl-lg rounded-bl-lg"
+                            : header.index === headerGroup.headers.length - 1
                               ? "rounded-br-lg rounded-tr-lg"
                               : ""
-                          }`}
+                            }`}
                         >
                           {flexRender(
                             header.column.columnDef.header,
@@ -867,57 +432,59 @@ export default function PBITable() {
                 <p className="text-sm">Items Per Page</p>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="flex items-center gap-2 px-2 py-1"
-                    >
-                      {selectedValue} <ChevronDown className="h-4 w-4" />
+                    <Button variant="outline" className="flex items-center gap-2 px-2 py-1">
+                      {table.getState().pagination.pageSize}
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-5">
-                    {[10, 20, 30].map((value) => (
+                  <DropdownMenuContent>
+                    {[10, 20, 30, 40, 50].map((size) => (
                       <DropdownMenuItem
-                        key={value}
-                        onClick={() => setSelectedValue(value.toString())}
+                        key={size}
+                        onClick={() => table.setPageSize(size)}
                       >
-                        {value}
+                        {size}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
               <div>
-                <Pagination className="justify-end">
+                <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.max(1, prev - 1))
-                        }
-                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                      >
+                        Previous
+                      </Button>
                     </PaginationItem>
-                    {[...Array(totalPages)].map((_, pageIndex) => (
-                      <PaginationItem key={pageIndex}>
-                        <PaginationLink
-                          href="#"
-                          isActive={currentPage === pageIndex + 1}
-                          onClick={() => setCurrentPage(pageIndex + 1)}
-                        >
-                          {pageIndex + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
+
+                    {/* Generate page numbers */}
+                    {Array.from({ length: table.getPageCount() }, (_, i) => i + 1)
+                      .map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => table.setPageIndex(page - 1)}
+                            isActive={table.getState().pagination.pageIndex === page - 1}
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+
                     <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() =>
-                          setCurrentPage((prev) =>
-                            Math.min(totalPages, prev + 1)
-                          )
-                        }
-                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                      >
+                        Next
+                      </Button>
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>

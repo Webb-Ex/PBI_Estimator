@@ -26,15 +26,14 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  Row,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { SIZE_MAPPING, TSIZE_DAYS } from "@/components/pbi-table";
+import { PBI, SIZE_MAPPING, TSIZE_DAYS } from "@/constants/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -53,6 +52,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/skeletons/checkoutTableSkeleton";
+import { CheckoutDetailsDialog } from "@/components/viewCheckout";
 
 const columns: ColumnDef<CheckoutHistory>[] = [
   {
@@ -91,8 +92,8 @@ const columns: ColumnDef<CheckoutHistory>[] = [
             status === "completed"
               ? "bg-green-100 text-green-800"
               : status === "pending"
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-red-100 text-red-800"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-red-100 text-red-800"
           }
         >
           {status}
@@ -112,59 +113,31 @@ const columns: ColumnDef<CheckoutHistory>[] = [
   {
     id: "actions",
     header: "Action",
-    cell: ({ row }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => console.log("View details:", row.original)}
-      >
-        <Eye className="h-4 w-4" />
-      </Button>
-    ),
-  },
+    cell: ({ row }) => {
+      const [open, setOpen] = useState(false);
+
+      return (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setOpen(true)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+
+          <CheckoutDetailsDialog
+            isOpen={open}
+            onOpenChange={setOpen}
+            checkoutId={row.original.id}
+            totalEffort={row.original.total_effort}
+          />
+        </>
+      );
+    },
+  }
 ];
 
-function TableSkeleton() {
-  return (
-    <div className="border-b-2 border-gray-200">
-      <Table className="m-0">
-        <TableHeader className="bg-gray-100 uppercase">
-          <TableRow className="border-none">
-            {[...Array(6)].map((_, i) => (
-              <TableHead key={i}>
-                <Skeleton className="h-4 w-24" />
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[...Array(5)].map((_, i) => (
-            <TableRow key={i} className="border-b">
-              <TableCell>
-                <Skeleton className="h-4 w-32" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-24" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-28" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-8 w-8 rounded-full" />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 export default function CheckoutHistory() {
   const [data, setData] = useState<CheckoutHistory[]>([]);
@@ -199,7 +172,7 @@ export default function CheckoutHistory() {
             pbis?.reduce((total, pbi) => {
               const size =
                 SIZE_MAPPING[
-                  pbi.t_size.toLowerCase() as keyof typeof SIZE_MAPPING
+                pbi.t_size.toLowerCase() as keyof typeof SIZE_MAPPING
                 ];
               return total + TSIZE_DAYS[size];
             }, 0) || 0;
@@ -221,17 +194,28 @@ export default function CheckoutHistory() {
     }
   };
 
-  // Add pagination calculations
-  const start = (currentPage - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  const totalPages = Math.ceil(data.length / itemsPerPage);
-  const paginatedData = data.slice(start, end);
-
-  // Update table configuration
   const table = useReactTable({
-    data: paginatedData,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      pagination: {
+        pageIndex: currentPage - 1,
+        pageSize: itemsPerPage,
+      },
+    },
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: currentPage - 1,
+          pageSize: itemsPerPage,
+        });
+        setCurrentPage(newState.pageIndex + 1);
+        setItemsPerPage(newState.pageSize);
+      }
+    },
+    pageCount: Math.ceil(data.length / itemsPerPage),
   });
 
   useEffect(() => {
@@ -254,14 +238,13 @@ export default function CheckoutHistory() {
                         headerGroup.headers.map((header) => (
                           <TableHead
                             key={header.id}
-                            className={`font-bold text-gray-700 ${
-                              header.index === 0
+                            className={`font-bold text-gray-700 ${header.index === 0
                                 ? "w-[50px] rounded-tl-lg rounded-bl-lg"
                                 : header.index ===
                                   headerGroup.headers.length - 1
-                                ? "rounded-br-lg rounded-tr-lg"
-                                : ""
-                            }`}
+                                  ? "rounded-br-lg rounded-tr-lg"
+                                  : ""
+                              }`}
                           >
                             {flexRender(
                               header.column.columnDef.header,
@@ -314,57 +297,58 @@ export default function CheckoutHistory() {
                   <p className="text-sm">Items Per Page</p>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2 px-2 py-1"
-                      >
-                        {selectedValue} <ChevronDown className="h-4 w-4" />
+                      <Button variant="outline" className="flex items-center gap-2 px-2 py-1">
+                        {table.getState().pagination.pageSize}
+                        <ChevronDown className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-5">
-                      {[10, 20, 30].map((value) => (
+                    <DropdownMenuContent>
+                      {[10, 20, 30, 40, 50].map((size) => (
                         <DropdownMenuItem
-                          key={value}
-                          onClick={() => setSelectedValue(value.toString())}
+                          key={size}
+                          onClick={() => table.setPageSize(size)}
                         >
-                          {value}
+                          {size}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
                 <div>
-                  <Pagination className="justify-end">
+                  <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() =>
-                            setCurrentPage((prev) => Math.max(1, prev - 1))
-                          }
-                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => table.previousPage()}
+                          disabled={!table.getCanPreviousPage()}
+                        >
+                          Previous
+                        </Button>
                       </PaginationItem>
-                      {[...Array(totalPages)].map((_, pageIndex) => (
-                        <PaginationItem key={pageIndex}>
-                          <PaginationLink
-                            href="#"
-                            isActive={currentPage === pageIndex + 1}
-                            onClick={() => setCurrentPage(pageIndex + 1)}
-                          >
-                            {pageIndex + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
+
+                      {Array.from({ length: table.getPageCount() }, (_, i) => i + 1)
+                        .map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => table.setPageIndex(page - 1)}
+                              isActive={table.getState().pagination.pageIndex === page - 1}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
                       <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() =>
-                            setCurrentPage((prev) =>
-                              Math.min(totalPages, prev + 1)
-                            )
-                          }
-                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => table.nextPage()}
+                          disabled={!table.getCanNextPage()}
+                        >
+                          Next
+                        </Button>
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
