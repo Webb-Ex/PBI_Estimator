@@ -35,8 +35,8 @@ const geistMono = Geist_Mono({
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "IRIS Demo with enhanced features",
+  title: "PBI Estimator",
+  description: "PBI Estimator Dashboard",
 };
 
 export default function CombinedLayout({
