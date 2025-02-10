@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
@@ -9,10 +8,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import DynamicBreadcrumb from "@/components/dynamic-breadcrumb";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { CommandMenu } from "@/components/command-menu";
+
 import "./globals.css";
-import SocketConnection from "@/components/connection-status";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,6 +19,8 @@ import {
 } from "@/components/ui/breadcrumb";
 
 import { Toaster } from "sonner";
+import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Fonts setup
 const geistSans = Geist({
@@ -70,11 +70,8 @@ export default function CombinedLayout({
                       <BreadcrumbItem>PBI Management</BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
-                  {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
-                  {/* <CommandMenu /> */}
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* <SocketConnection /> */}
                   <ThemeToggle />
                 </div>
               </header>
