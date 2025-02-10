@@ -87,8 +87,6 @@ const updateLikes = async (pbiId: string, userId: string) => {
     if (existing) {
       let newCount = existing.like_count + 1;
 
-      console.log("newcount", existing.like_count, newCount);
-
       const { data, error: updateError } = await supabase
         .from("pbi_likes")
         .update({
@@ -229,6 +227,12 @@ export default function PBITable() {
     }
   };
 
+  const updateLocalLikes = (pbiId: string, newLikeCount: number) => {
+    setTableData(prev => prev.map(item => 
+      item.id === pbiId ? { ...item, likes: newLikeCount } : item
+    ));
+  };
+
   useEffect(() => {
     fetchData();
 
@@ -237,9 +241,19 @@ export default function PBITable() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "pbi_likes" },
-        async () => {
-          // Refetch data to get updated aggregated likes
-          await fetchData();
+        async (payload: any) => {
+          if (payload.new) {
+            // Get all likes for this PBI and sum them
+            const { data: likesData, error } = await supabase
+              .from("pbi_likes")
+              .select("like_count")
+              .eq("pbi_id", payload.new.pbi_id);
+
+            if (!error && likesData) {
+              const totalLikes = likesData.reduce((sum, record) => sum + (record.like_count || 0), 0);
+              updateLocalLikes(payload.new.pbi_id, totalLikes);
+            }
+          }
         }
       )
       .subscribe();
